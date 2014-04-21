@@ -1,10 +1,8 @@
 
 ### <コ:彡
-### a repo of random utilities, hopefully useful
+#### see-and-spell
 
-All of them [MIT License](http://www.opensource.org/licenses/MIT)
-
-#### seeandspell
+license: [MIT License](http://www.opensource.org/licenses/MIT)
 
 Python. Walks a directory structure with options to rename files according to parent directory. Also, option to guess filetype and add an extension. Also, to extract text from a variety of text based files.
 

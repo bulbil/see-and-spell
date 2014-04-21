@@ -27,10 +27,10 @@ defaults = {
 	'rename': 'n',
 	'guessType': 'n',
 	'logging': 'n',
-	'extract': 'y',
+	'extract': 'n',
 	'catch': 'Attachment',
 	'confirm': None,
-	'tikaDir': '/Users/aldus_manutius/Documents/_CODE/swissarmy/'
+	'tikaDir': '~/../../Applications/tika-app-1.5.jar'
 	}
 
 # _______________________________ functions
@@ -149,13 +149,11 @@ def guess_type(filename, directorypath, logfile, boolean):
 
 # extracts plaintext and writes it to a file (if confirm boolean)
 def extract_text(filename1, filename2, dict):
-
-	print(filename1)
 	# fh = open(filename2, 'w')
 	
 	if dict['confirm']: 
 
-		b = subprocess.check_output(['java', '-jar', dict['tikaDir'] + 'tika-app-1.5.jar', '-t', filename1])
+		b = subprocess.check_output(['java', '-jar', dict['tikaDir'], '-t', filename1])
 		text_extract = b.decode('utf-8')
 		filename2.write(text_extract)
 
