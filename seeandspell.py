@@ -24,13 +24,16 @@ import mimetypes
 
 defaults = {
 	'rootDir': '.',
-	'rename': 'n',
-	'guessType': 'n',
-	'logging': 'n',
-	'extract': 'n',
+	'rename': 'y',
+	'guessType': 'y',
+	'logging': 'y',
+	'extract': False,
+	'compile': 'n',
 	'catch': 'Attachment',
 	'confirm': None,
-	'tikaDir': '~/../../Applications/tika-app-1.5.jar'
+	'tikaDir': '/Applications/tika-app-1.5.jar',
+	'compilefile': 'extracts.txt',
+	'logfile': 'log.txt'
 	}
 
 # _______________________________ functions
@@ -43,7 +46,8 @@ def set_arguments(dict):
 		'rename',
 		'guessType',
 		'logging',
-		'extract'
+		'extract',
+		'compile'
 		]
 
 	prompts = [
@@ -52,6 +56,7 @@ def set_arguments(dict):
 		'guess file type and add extension? (y/n): ',
 		'create log file? (y/n): ',
 		'extract plaintext and write to file? (y/n): '
+		'compiled or separate plaintext extracts? (y/n): '
 		]
 
 	i = 0
@@ -74,11 +79,13 @@ def see_and_spell(dict):
 	start = os.getcwd()
 	print(start)
 
-	if dict['logging'] == 'y': fh_log = open('log.txt', 'w')
-	if dict['extract'] == 'y': fh_extract = open('extract.txt', 'w')
+	if dict['logging'] == 'y': fh_log = open(dict['logfile'], 'a')
+	if dict['compile'] == 'y': fh_extract = open(dict['compilefile'], 'w')
 
 	for dirpath, dirnames, filenames in os.walk(dict['rootDir']):
 
+		print(dirpath)
+		if dirpath == './_extracts': continue
 		if dict['confirm'] is None:
 
 			i+= 1
@@ -87,42 +94,50 @@ def see_and_spell(dict):
 		os.chdir(os.getcwd() + dirpath[1:])
 
 		# the main event -- calls the other functions
-		j = 0
+		j = 1
 		for fname in filenames:
 
-			print(fname)
+			if fname[0] == '.' or fname == 'extracts.txt' or fname == 'log.txt' : continue
+
+			if dict['extract'] is False:
+				if dict['guessType'] == 'y':
+					ext = guess_type(fname, dirpath, fh_log, dict)
+					ext = '' if ext is None else ext
+				else: ext = ''
+				
+				if dict['rename'] == 'y': rename(fname, ext, dirpath, fh_log, dict)
 			
-			if dict['guessType'] == 'y':
-				ext = guess_type(fname, dirpath, fh, dict['confirm'])
-				ext = '' if ext is None else ext
-			else: ext = ''
-			
-			if dict['rename'] == 'y': rename(fname, ext, dirpath, fh, dict['confirm'])
-			
-			if dict['extract'] == 'y':
-				fileout = dirpath[2:] + '_' + str(j)
-				try: extract_text(fname, fh_extract, dict['confirm'])
+			if dict['extract'] == True:
+	
+				if dict['compile'] == 'n':			
+					f = dirpath[2:] + '_' + str(j) + '.txt'
+					fh_extract = open(f, 'w')
+				
+				try: extract_text(fname, fh_extract, dict)
 				except TypeError: print('whoops!')
 				j+=1
 
 		if os.getcwd() != start: os.chdir('..')
+
 		print('\t')
 
-	if dict['logging'] == 'y': fh_log.close()
-	if dict['extract'] == 'y': fh_extract.close()
+	if dict['extract'] == 'y' and dict['compile'] == 'y' and dict['confirm']: fh_extract.close()
 
 # generates a new name based on parent folder and renames if confirm boolean
-def rename(filename, extension, directorypath, logfile, boolean):		
+def rename(filename, extension, directorypath, logfile, args):		
 	# for the files that were originally called Attachment_XX
 	# renames them according to parent directory	
+
+	catch = args['catch']
 	if filename[:len(catch)] == catch:
 		newName = directorypath[2:] + filename[10:] + extension	
 	else: 
 		newName = filename + extension
 
-	if boolean: 
+	if args['confirm']: 
+		logfile.write('renaming : ' + filename + '--->' + newName + '\n')
 		os.rename(filename, newName)
-	elif boolean is None:
+	elif args['confirm'] is None:
 		print(newName)
 
 # guesses the mime type / returns extension
@@ -148,16 +163,17 @@ def guess_type(filename, directorypath, logfile, boolean):
 			return ''
 
 # extracts plaintext and writes it to a file (if confirm boolean)
-def extract_text(filename1, filename2, dict):
-	# fh = open(filename2, 'w')
+def extract_text(filename_in, extract_fileout, dict):
+
+	b = subprocess.check_output(['java', '-jar', dict['tikaDir'], filename_in])
+	text_extract = b.decode('utf-8')
+
+	extract_fileout.write(filename_in + '\n' + text_extract)
 	
-	if dict['confirm']: 
+	if dict['compile'] == 'n':
+		extract_fileout.close()
+		os.renames(extract_fileout.name, '../_extracts/' + extract_fileout.name)
 
-		b = subprocess.check_output(['java', '-jar', dict['tikaDir'], '-t', filename1])
-		text_extract = b.decode('utf-8')
-		filename2.write(text_extract)
-
-	# fh.close()
 # _______________________________ run
 
 args = set_arguments(defaults)
@@ -166,6 +182,11 @@ see_and_spell(args)
 
 confirm = input('confirm rename? (y/n) : ')
 args['confirm'] = True if confirm == 'y' else False  
+
+see_and_spell(args)
+
+extract = input('extract text? (y/n) : ')
+args['extract'] = True if confirm == 'y' else False
 
 see_and_spell(args)
 
