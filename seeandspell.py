@@ -29,6 +29,7 @@ defaults = {
 	'logging': 'y',
 	'extract': False,
 	'compile': 'n',
+	'flag': '-t',
 	'catch': 'Attachment',
 	'confirm': None,
 	'tikaDir': '/Applications/tika-app-1.5.jar',
@@ -47,7 +48,8 @@ def set_arguments(dict):
 		'guessType',
 		'logging',
 		'extract',
-		'compile'
+		'compile',
+		'flag'
 		]
 
 	prompts = [
@@ -57,6 +59,7 @@ def set_arguments(dict):
 		'create log file? (y/n): ',
 		'extract plaintext and write to file? (y/n): '
 		'compiled or separate plaintext extracts? (y/n): '
+		'plaintext (-t) or xhtml (-x)? [-t or -x]: '
 		]
 
 	i = 0
@@ -110,7 +113,8 @@ def see_and_spell(dict):
 			if dict['extract'] == True:
 	
 				if dict['compile'] == 'n':			
-					f = dirpath[2:] + '_' + str(j) + '.txt'
+					f = dirpath[2:] + '_' + str(j)
+					f = f + '.html' if dict['flag'] == '-x' else f + '.txt'
 					fh_extract = open(f, 'w')
 				
 				try: extract_text(fname, fh_extract, dict)
@@ -165,28 +169,33 @@ def guess_type(filename, directorypath, logfile, boolean):
 # extracts plaintext and writes it to a file (if confirm boolean)
 def extract_text(filename_in, extract_fileout, dict):
 
-	b = subprocess.check_output(['java', '-jar', dict['tikaDir'], filename_in])
+	b = subprocess.check_output(['java', '-jar', dict['tikaDir'], dict['flag'], '-r', filename_in])
 	text_extract = b.decode('utf-8')
 
-	extract_fileout.write(filename_in + '\n' + text_extract)
+	prefix = filename_in if dict['flag'] == '-t' else ''
+
+	extract_fileout.write(prefix + '\n' + text_extract)
 	
 	if dict['compile'] == 'n':
 		extract_fileout.close()
 		os.renames(extract_fileout.name, '../_extracts/' + extract_fileout.name)
 
-# _______________________________ run
+# _______________________________ main
 
-args = set_arguments(defaults)
 
-see_and_spell(args)
+if __name__ == '__main__':
+	
+	args = set_arguments(defaults)
 
-confirm = input('confirm rename? (y/n) : ')
-args['confirm'] = True if confirm == 'y' else False  
+	see_and_spell(args)
 
-see_and_spell(args)
+	confirm = input('confirm rename? (y/n) : ')
+	args['confirm'] = True if confirm == 'y' else False  
 
-extract = input('extract text? (y/n) : ')
-args['extract'] = True if confirm == 'y' else False
+	see_and_spell(args)
 
-see_and_spell(args)
+	extract = input('extract text? (y/n) : ')
+	args['extract'] = True if confirm == 'y' else False
+
+	see_and_spell(args)
 
